@@ -1,83 +1,79 @@
 var express = require('express');
 var router = express.Router();
 const couchbase = require('couchbase');
-const crypto = require('crypto'); 
 
-var Transaction = require('../models/transaction');
+const Expense = require('../models/expense');
+const exp = require('constants');
+const addExpense = require('../controllers/expenseController');
+const { get } = require('http');
 
-var transaction;
+var result;
 // let collection_default = {};
 
 /* GET accounts listing. */
-router.get('/', function(req, res, next) {
-  connect()
-//   .then(
-//     getTransactions()
-//   )
-  .then(
-    res.send(transaction)
-  );
+router.get('/expenses', function(req, res, next) {
+    getExpense()
+    .then(
+        res.send(result)
+    );
 });
 
-router.post('/', function(req, res, next) {
-    store()
+router.post('/expenses', function(req, res, next) {
+    setExpense(req)
     .then(
         res.send(transaction)
     )
 })
 
-async function connect() {
-  
-  const clusterConnStr = 'couchbase://localhost';
-  const certificate = '/cert/path/cert.pem';
-  const username = 'Administrator';
-  const password = 'admin10';
-  const bucketName = 'tym';
+async function getExpense() {
+    
+    const clusterConnStr = 'couchbase://localhost';
+    const certificate = '/cert/path/cert.pem';
+    const username = 'Administrator';
+    const password = 'admin10';
+    const bucketName = 'tym';
 
-  const cluster = await couchbase.connect(clusterConnStr, {
-    username: username,
-    password: password,
-    // Uncomment if you require a secure cluster connection (TSL/SSL).
-    // This is strongly recommended for production use.
-    // security: {
-    //   trustStorePath: certificate,
-    // },
-  });
+    const cluster = await couchbase.connect(clusterConnStr, {
+        username: username,
+        password: password,
+        // Uncomment if you require a secure cluster connection (TSL/SSL).
+        // This is strongly recommended for production use.
+        // security: {
+        //   trustStorePath: certificate,
+        // },
+    });
 
-  var qs = `SELECT expenses.* from \`tym\`.transactions.expenses`;
-
-  transaction = await cluster.query(qs);
+    getExpense(cluster);
 
 }
 
-async function store() {
+async function setExpense(req) {
     const clusterConnStr = 'couchbase://localhost';
-  const certificate = '/cert/path/cert.pem';
-  const username = 'Administrator';
-  const password = 'admin10';
-  const bucketName = 'tym';
+    const certificate = '/cert/path/cert.pem';
+    const username = 'Administrator';
+    const password = 'admin10';
+    const bucketName = 'tym';
 
-  const cluster = await couchbase.connect(clusterConnStr, {
-    username: username,
-    password: password,
-    // Uncomment if you require a secure cluster connection (TSL/SSL).
-    // This is strongly recommended for production use.
-    // security: {
-    //   trustStorePath: certificate,
-    // },
-  });
+    const cluster = await couchbase.connect(clusterConnStr, {
+      username: username,
+      password: password,
+      // Uncomment if you require a secure cluster connection (TSL/SSL).
+      // This is strongly recommended for production use.
+      // security: {
+      //   trustStorePath: certificate,
+      // },
+    });
 
-  const bucket = cluster.bucket(bucketName);
+    let expense = new Expense();
 
-  const scope = bucket.scope('transactions');
+    expense.setName(req.body.name);
+    expense.setDescription(req.body.description)
+    expense.setDate(req.body.date)
+    expense.setTime(req.body.time)
+    expense.setAmount(req.body.amount)
+    expense.setCategory(req.body.category)
 
-  const transactionsCollection = scope.collection('expenses');
-
-  let uuid = crypto.randomUUID();
-
-  await transactionsCollection.upsert(uuid, new Transaction());
-
-  transaction = await transactionsCollection.get(uuid);
+    addExpense(cluster, expense);
 }
 
 module.exports = router;
